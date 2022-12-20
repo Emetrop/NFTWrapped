@@ -7,6 +7,7 @@ import {
   NFTWrapped,
   NFTWrappedLeaderboard,
   NFTWrappedBundle,
+  // eslint-disable-next-line node/no-missing-import
 } from "../typechain";
 
 describe("NFTWrapped", () => {
@@ -61,14 +62,14 @@ describe("NFTWrapped", () => {
   });
 
   it("Should finish presale", async () => {
-    expect(await nftWrappedContract.isPresale()).to.be.true;
+    expect(await nftWrappedContract.isPresale()).to.be.equal(true);
 
     expect(await nftWrappedContract.endPresale()).to.emit(
       nftWrappedContract,
       "PresaleEnded"
     );
 
-    expect(await nftWrappedContract.isPresale()).to.be.false;
+    expect(await nftWrappedContract.isPresale()).to.be.equal(false);
   });
 
   it("Should mint in main sale", async () => {
@@ -104,6 +105,28 @@ describe("NFTWrapped", () => {
       .withArgs(ethers.constants.AddressZero, tester2.address, 0);
 
     expect(await nftWrappedContract.ownerOf(1)).to.be.equal(tester2.address);
+  });
+
+  it("Should not allow to mint with low sent ETH value", async () => {
+    expect(
+      nftWrappedContract.mint({ value: ethers.utils.parseEther("0.01") })
+    ).to.be.revertedWith("Not enough ETH");
+
+    expect(
+      nftWrappedContract.mintPresale("", {
+        value: ethers.utils.parseEther("0.01"),
+      })
+    ).to.be.revertedWith("Not enough ETH");
+  });
+
+  it("Should not allow to mint as bundle", async () => {
+    expect(
+      nftWrappedContract.connect(tester1).mintBundle(tester1.address)
+    ).to.be.revertedWith("Only bundle contract");
+
+    expect(
+      nftWrappedContract.connect(tester1).mintPresaleBundle(tester1.address, "")
+    ).to.be.revertedWith("Only bundle contract");
   });
 
   it("Should witdraw funds", async () => {
