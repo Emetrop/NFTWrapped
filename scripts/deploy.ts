@@ -40,6 +40,7 @@ async function main() {
 
   const NFTWrapped = await ethers.getContractFactory("NFTWrapped");
   const nftWrapped = await NFTWrapped.deploy(
+    "https://storage.googleapis.com/nft-wrapped/nft/json/",
     nftWrappedBundle.address,
     merkleRoot
   );
@@ -52,6 +53,7 @@ async function main() {
     "NFTWrappedLeaderboard"
   );
   const nftWrappedLeaderboard = await NFTWrappedLeaderboard.deploy(
+    "https://storage.googleapis.com/nft-wrapped/leaderboard/json/",
     nftWrappedBundle.address,
     merkleRoot
   );

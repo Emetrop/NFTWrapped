@@ -41,6 +41,7 @@ describe("NFTWrapped", () => {
 
     const NFTWrappedContract = await ethers.getContractFactory("NFTWrapped");
     nftWrappedContract = await NFTWrappedContract.deploy(
+      "https://storage.googleapis.com/nft-wrapped/nft/json/",
       nftWrappedBundleContract.address,
       merkleRoot
     );
@@ -50,6 +51,7 @@ describe("NFTWrapped", () => {
       "NFTWrappedLeaderboard"
     );
     nftWrappedLeaderboardContract = await NFTWrappedLeaderboardContract.deploy(
+      "https://storage.googleapis.com/nft-wrapped/leaderboard/json/",
       nftWrappedBundleContract.address,
       merkleRoot
     );
@@ -119,7 +121,7 @@ describe("NFTWrapped", () => {
     ).to.be.revertedWith("Not enough ETH");
   });
 
-  it("Should not allow to mint as bundle", async () => {
+  it("Should not allow to mint as bundle without bundle contract", async () => {
     expect(
       nftWrappedContract.connect(tester1).mintBundle(tester1.address)
     ).to.be.revertedWith("Only bundle contract");
@@ -127,6 +129,16 @@ describe("NFTWrapped", () => {
     expect(
       nftWrappedContract.connect(tester1).mintPresaleBundle(tester1.address, "")
     ).to.be.revertedWith("Only bundle contract");
+  });
+
+  it("Should return correct token uri", async () => {
+    await nftWrappedContract.endPresale();
+
+    await nftWrappedContract.mint({ value: ethers.utils.parseEther("0.02") });
+
+    expect(await nftWrappedContract.tokenURI(1)).to.be.equal(
+      "https://storage.googleapis.com/nft-wrapped/nft/json/1.json"
+    );
   });
 
   it("Should witdraw funds", async () => {
