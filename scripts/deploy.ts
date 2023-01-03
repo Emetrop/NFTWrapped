@@ -4,21 +4,6 @@
 // When running the script with `npx hardhat run <script>` you'll find the Hardhat
 // Runtime Environment's members available in the global scope.
 import { ethers } from "hardhat";
-import keccak256 from "keccak256";
-import MerkleTree from "merkletreejs";
-
-const whitelistedAddresses: string[] = [
-  // ... more addresses
-];
-
-const getMerkleRoot = (whitelistedAddresses: string[]) => {
-  const leafNodes = whitelistedAddresses.map(keccak256);
-  const merkleTree = new MerkleTree(leafNodes, keccak256, {
-    sortPairs: true,
-  });
-
-  return merkleTree.getRoot();
-};
 
 async function main() {
   // Hardhat always runs the compile task when running scripts with its command
@@ -36,13 +21,10 @@ async function main() {
 
   console.log("NFTWrappedBundle deployed to:", nftWrappedBundle.address);
 
-  const merkleRoot = getMerkleRoot(whitelistedAddresses);
-
   const NFTWrapped = await ethers.getContractFactory("NFTWrapped");
   const nftWrapped = await NFTWrapped.deploy(
     "https://storage.googleapis.com/nft-wrapped/nft/json/",
-    nftWrappedBundle.address,
-    merkleRoot
+    nftWrappedBundle.address
   );
 
   await nftWrapped.deployed();
@@ -54,8 +36,7 @@ async function main() {
   );
   const nftWrappedLeaderboard = await NFTWrappedLeaderboard.deploy(
     "https://storage.googleapis.com/nft-wrapped/leaderboard/json/",
-    nftWrappedBundle.address,
-    merkleRoot
+    nftWrappedBundle.address
   );
 
   await nftWrappedLeaderboard.deployed();

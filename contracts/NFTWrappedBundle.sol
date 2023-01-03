@@ -10,12 +10,6 @@ contract NFTWrappedBundle is Ownable {
     address public contract1;
     address public contract2;
 
-    function mintPresale(bytes32[] calldata merkleProof) external payable {
-        require(msg.value >= PRICE_BUNDLE, "Not enough ETH");
-        IMintableBundle(contract1).mintPresaleBundle(msg.sender, merkleProof);
-        IMintableBundle(contract2).mintPresaleBundle(msg.sender, merkleProof);
-    }
-
     function mint() external payable {
         require(msg.value >= PRICE_BUNDLE, "Not enough ETH");
         IMintableBundle(contract1).mintBundle(msg.sender);

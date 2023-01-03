@@ -1,7 +1,5 @@
 import { expect } from "chai";
 import { ethers, waffle } from "hardhat";
-import MerkleTree from "merkletreejs";
-import keccak256 from "keccak256";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import {
   NFTWrapped,
@@ -20,30 +18,18 @@ describe("NFTWrapped", () => {
   let nftWrappedLeaderboardContract: NFTWrappedLeaderboard;
   let nftWrappedBundleContract: NFTWrappedBundle;
 
-  let merkleTree: MerkleTree;
-  let leafNodes: string[] = [];
-
   beforeEach(async () => {
     [owner, tester1, tester2] = await ethers.getSigners();
-
-    const whitelistedAddresses = [owner.address, tester1.address];
 
     const NFTWrappedBundleContract = await ethers.getContractFactory(
       "NFTWrappedBundle"
     );
     nftWrappedBundleContract = await NFTWrappedBundleContract.deploy();
 
-    leafNodes = whitelistedAddresses.map(keccak256);
-    merkleTree = new MerkleTree(leafNodes, keccak256, {
-      sortPairs: true,
-    });
-    const merkleRoot = merkleTree.getRoot();
-
     const NFTWrappedContract = await ethers.getContractFactory("NFTWrapped");
     nftWrappedContract = await NFTWrappedContract.deploy(
       "https://storage.googleapis.com/nft-wrapped/nft/json/",
-      nftWrappedBundleContract.address,
-      merkleRoot
+      nftWrappedBundleContract.address
     );
     await nftWrappedContract.deployed();
 
@@ -52,8 +38,7 @@ describe("NFTWrapped", () => {
     );
     nftWrappedLeaderboardContract = await NFTWrappedLeaderboardContract.deploy(
       "https://storage.googleapis.com/nft-wrapped/leaderboard/json/",
-      nftWrappedBundleContract.address,
-      merkleRoot
+      nftWrappedBundleContract.address
     );
     await nftWrappedLeaderboardContract.deployed();
 
@@ -63,37 +48,9 @@ describe("NFTWrapped", () => {
     );
   });
 
-  it("Should finish presale", async () => {
-    expect(await nftWrappedContract.isPresale()).to.be.equal(true);
-
-    expect(await nftWrappedContract.endPresale()).to.emit(
-      nftWrappedContract,
-      "PresaleEnded"
-    );
-
-    expect(await nftWrappedContract.isPresale()).to.be.equal(false);
-  });
-
-  it("Should mint in main sale", async () => {
-    await nftWrappedContract.endPresale();
-
+  it("Should mint", async () => {
     expect(
       await nftWrappedContract.mint({ value: ethers.utils.parseEther("0.02") })
-    )
-      .to.emit(nftWrappedContract, "Transfer")
-      .withArgs(ethers.constants.AddressZero, owner.address, 0);
-
-    expect(await nftWrappedContract.ownerOf(1)).to.be.equal(owner.address);
-  });
-
-  it("Should mint in presale", async () => {
-    expect(
-      await nftWrappedContract.mintPresale(
-        merkleTree.getHexProof(leafNodes[0]),
-        {
-          value: ethers.utils.parseEther("0.02"),
-        }
-      )
     )
       .to.emit(nftWrappedContract, "Transfer")
       .withArgs(ethers.constants.AddressZero, owner.address, 0);
@@ -113,27 +70,15 @@ describe("NFTWrapped", () => {
     expect(
       nftWrappedContract.mint({ value: ethers.utils.parseEther("0.01") })
     ).to.be.revertedWith("Not enough ETH");
-
-    expect(
-      nftWrappedContract.mintPresale("", {
-        value: ethers.utils.parseEther("0.01"),
-      })
-    ).to.be.revertedWith("Not enough ETH");
   });
 
   it("Should not allow to mint as bundle without bundle contract", async () => {
     expect(
       nftWrappedContract.connect(tester1).mintBundle(tester1.address)
     ).to.be.revertedWith("Only bundle contract");
-
-    expect(
-      nftWrappedContract.connect(tester1).mintPresaleBundle(tester1.address, "")
-    ).to.be.revertedWith("Only bundle contract");
   });
 
   it("Should return correct token uri", async () => {
-    await nftWrappedContract.endPresale();
-
     await nftWrappedContract.mint({ value: ethers.utils.parseEther("0.02") });
 
     expect(await nftWrappedContract.tokenURI(1)).to.be.equal(
@@ -146,7 +91,7 @@ describe("NFTWrapped", () => {
       await waffle.provider.getBalance(nftWrappedContract.address)
     ).to.equal(0);
 
-    await nftWrappedContract.mintPresale(merkleTree.getHexProof(leafNodes[0]), {
+    await nftWrappedContract.mint({
       value: ethers.utils.parseEther("0.02"),
     });
 
@@ -176,37 +121,13 @@ describe("NFTWrapped", () => {
       );
 
       expect(
-        nftWrappedBundleContract.mintPresale(
-          merkleTree.getHexProof(leafNodes[0]),
-          {
-            value: ethers.utils.parseEther("0.06"),
-          }
-        )
+        nftWrappedBundleContract.mint({
+          value: ethers.utils.parseEther("0.06"),
+        })
       ).to.be.revertedWith("function call to a non-contract account");
     });
 
-    it("Should mint as presale bundle", async () => {
-      expect(
-        await nftWrappedBundleContract.mintPresale(
-          merkleTree.getHexProof(leafNodes[0]),
-          {
-            value: ethers.utils.parseEther("0.06"),
-          }
-        )
-      )
-        .to.emit(nftWrappedContract, "Transfer")
-        .withArgs(ethers.constants.AddressZero, owner.address, 0);
-
-      expect(await nftWrappedContract.ownerOf(1)).to.be.equal(owner.address);
-      expect(await nftWrappedLeaderboardContract.ownerOf(1)).to.be.equal(
-        owner.address
-      );
-    });
-
-    it("Should mint as mainsale bundle", async () => {
-      await nftWrappedContract.endPresale();
-      await nftWrappedLeaderboardContract.endPresale();
-
+    it("Should mint as bundle", async () => {
       expect(
         await nftWrappedBundleContract.mint({
           value: ethers.utils.parseEther("0.06"),
